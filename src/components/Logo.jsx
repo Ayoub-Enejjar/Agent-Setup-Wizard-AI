@@ -1,0 +1,37 @@
+import React from 'react';
+
+// Bold geometric "R" logomark inspired by Busboy's clean italic letterform style
+export const LogoMark = ({ size = 32 }) => (
+  <svg width={size} height={size} viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect width="40" height="40" rx="10" fill="url(#logo-grad)" />
+    <path
+      d="M12.5 30V10H21.5C23.6 10 25.3 10.6 26.5 11.8C27.7 13 28.3 14.5 28.3 16.3C28.3 17.7 27.9 18.9 27.1 19.9C26.3 20.9 25.2 21.5 23.8 21.8L28.8 30H24.5L19.9 22.3H16.5V30H12.5ZM16.5 19.1H21.2C22.1 19.1 22.8 18.8 23.3 18.3C23.8 17.8 24.1 17.1 24.1 16.3C24.1 15.5 23.8 14.8 23.3 14.3C22.8 13.8 22.1 13.5 21.2 13.5H16.5V19.1Z"
+      fill="#060610"
+      style={{ fontWeight: 900 }}
+    />
+    <defs>
+      <linearGradient id="logo-grad" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+        <stop stopColor="#a78bfa" />
+        <stop offset="0.5" stopColor="#8b5cf6" />
+        <stop offset="1" stopColor="#a8ff3e" />
+      </linearGradient>
+    </defs>
+  </svg>
+);
+
+export const LogoFull = ({ size = 32 }) => (
+  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+    <LogoMark size={size} />
+    <span style={{
+      fontWeight: 800,
+      fontSize: size * 0.035 + 'rem',
+      letterSpacing: '-0.03em',
+      color: '#f5f3ef',
+      lineHeight: 1,
+    }}>
+      Rocket<span style={{ color: '#a78bfa' }}>.</span>new
+    </span>
+  </div>
+);
+
+export default LogoFull;

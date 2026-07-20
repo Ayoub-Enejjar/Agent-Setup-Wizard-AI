@@ -1,119 +1,43 @@
 import React, { useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Icon from '../AppIcon';
-import Button from './Button';
+import { LogoMark } from '../Logo';
 
-const Sidebar = ({ isCollapsed = false, onToggleCollapse }) => {
+const NAV = [
+  { label:'Dashboard',     path:'/dashboard',              icon:'LayoutDashboard' },
+  { label:'Conversations', path:'/conversations',          icon:'MessageCircle', badge:0 },
+  { label:'Bookings',      path:'/booking-management',     icon:'Calendar' },
+  { label:'Analytics',     path:'/analytics-dashboard',    icon:'BarChart3' },
+  { label:'Integrations',  path:'/integration-management', icon:'Puzzle' },
+  { label:'Payments',      path:'/payment-processing',     icon:'CreditCard' },
+  { label:'Agent Setup',   path:'/agent-setup-wizard',     icon:'Bot' },
+];
+
+const BOTTOM = [
+  { label:'Settings', path:'/settings', icon:'Settings' },
+];
+
+export default function Sidebar() {
   const location = useLocation();
-  const [hoveredItem, setHoveredItem] = useState(null);
+  const navigate = useNavigate();
+  const [tooltip, setTooltip] = useState(null);
+  const isActive = (path) => location.pathname === path;
 
-  const navigationItems = [
-    {
-      label: 'Dashboard',
-      path: '/dashboard',
-      icon: 'LayoutDashboard',
-      badge: null,
-      tooltip: 'Overview and key metrics'
-    },
-    {
-      label: 'Conversations',
-      path: '/conversations',
-      icon: 'MessageCircle',
-      badge: 3,
-      tooltip: 'Customer messages and chat'
-    },
-    {
-      label: 'Bookings',
-      path: '/booking-management',
-      icon: 'Calendar',
-      badge: null,
-      tooltip: 'Appointment management'
-    },
-    {
-      label: 'Analytics',
-      path: '/analytics-dashboard',
-      icon: 'BarChart3',
-      badge: null,
-      tooltip: 'Performance insights'
-    }
-  ];
-
-  const configurationItems = [
-    {
-      label: 'Integrations',
-      path: '/integration-management',
-      icon: 'Puzzle',
-      badge: null,
-      tooltip: 'Connect third-party services'
-    },
-    {
-      label: 'Payments',
-      path: '/payment-processing',
-      icon: 'CreditCard',
-      badge: null,
-      tooltip: 'Transaction management'
-    },
-    {
-      label: 'Agent Setup',
-      path: '/agent-setup-wizard',
-      icon: 'Bot',
-      badge: null,
-      tooltip: 'Configure AI agents'
-    }
-  ];
-
-  const bottomItems = [
-    {
-      label: 'Settings',
-      path: '/settings',
-      icon: 'Settings',
-      badge: null,
-      tooltip: 'Account preferences'
-    }
-  ];
-
-  const isActive = (path) => location?.pathname === path;
-
-  const NavItem = ({ item, showLabel = true }) => {
-    const active = isActive(item?.path);
-    
+  const NavBtn = ({ item }) => {
+    const active = isActive(item.path);
     return (
-      <div className="relative">
-        <button
-          onClick={() => window.location.href = item?.path}
-          onMouseEnter={() => setHoveredItem(item?.path)}
-          onMouseLeave={() => setHoveredItem(null)}
-          className={`
-            w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
-            ${active 
-              ? 'bg-secondary/10 text-secondary border border-secondary/20' :'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-            }
-          `}
-        >
-          <div className={`flex-shrink-0 ${active ? 'text-secondary' : ''}`}>
-            <Icon name={item?.icon} size={20} />
-          </div>
-          
-          {showLabel && (
-            <>
-              <span className="flex-1 text-left truncate">{item?.label}</span>
-              {item?.badge && (
-                <span className="bg-secondary text-secondary-foreground text-xs rounded-full px-2 py-0.5 font-medium min-w-[20px] text-center">
-                  {item?.badge}
-                </span>
-              )}
-            </>
-          )}
+      <div style={{ position:'relative' }}>
+        <button className={`sidebar-icon-btn ${active ? 'active' : ''}`}
+          onClick={() => navigate(item.path)}
+          onMouseEnter={() => setTooltip(item.label)}
+          onMouseLeave={() => setTooltip(null)}
+          title={item.label}>
+          <Icon name={item.icon} size={19} />
+          {item.badge > 0 && <span style={{ position:'absolute', top:4, right:4, width:8, height:8, borderRadius:'50%', background:'#a8ff3e' }} />}
         </button>
-        {/* Tooltip for collapsed state */}
-        {isCollapsed && hoveredItem === item?.path && (
-          <div className="absolute left-full top-1/2 transform -translate-y-1/2 ml-2 z-300">
-            <div className="bg-popover border border-border rounded-lg px-3 py-2 shadow-elevation-2 whitespace-nowrap">
-              <p className="text-sm font-medium">{item?.label}</p>
-              {item?.tooltip && (
-                <p className="text-xs text-muted-foreground mt-1">{item?.tooltip}</p>
-              )}
-            </div>
+        {tooltip === item.label && (
+          <div style={{ position:'absolute', left:'100%', top:'50%', transform:'translateY(-50%)', marginLeft:12, background:'#13132a', border:'1px solid rgba(255,255,255,0.1)', borderRadius:8, padding:'0.4rem 0.85rem', whiteSpace:'nowrap', zIndex:400, boxShadow:'0 8px 24px rgba(0,0,0,0.4)' }}>
+            <span style={{ fontSize:'0.8rem', fontWeight:500, color:'#f5f3ef' }}>{item.label}</span>
           </div>
         )}
       </div>
@@ -122,121 +46,36 @@ const Sidebar = ({ isCollapsed = false, onToggleCollapse }) => {
 
   return (
     <>
-      {/* Desktop Sidebar */}
-      <aside className={`
-        hidden lg:flex lg:fixed lg:inset-y-0 lg:left-0 lg:z-100
-        ${isCollapsed ? 'lg:w-16' : 'lg:w-72'}
-        transition-all duration-300 ease-in-out
-      `}>
-        <div className="flex flex-col w-full bg-primary border-r border-border">
-          {/* Logo Section */}
-          <div className={`flex items-center ${isCollapsed ? 'justify-center px-4' : 'px-6'} py-4 border-b border-border/20`}>
-            {isCollapsed ? (
-              <div className="w-8 h-8 bg-gradient-secondary rounded-lg flex items-center justify-center">
-                <Icon name="Rocket" size={20} className="text-secondary-foreground" />
-              </div>
-            ) : (
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-gradient-secondary rounded-lg flex items-center justify-center">
-                  <Icon name="Rocket" size={20} className="text-secondary-foreground" />
-                </div>
-                <div>
-                  <h1 className="text-lg font-bold text-primary-foreground">Rocket.new</h1>
-                  <p className="text-xs text-primary-foreground/70">AI Business Platform</p>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Navigation */}
-          <nav className="flex-1 px-4 py-6 space-y-8 overflow-y-auto">
-            {/* Main Navigation */}
-            <div className="space-y-2">
-              {!isCollapsed && (
-                <h3 className="text-xs font-semibold text-primary-foreground/60 uppercase tracking-wider px-3">
-                  Main
-                </h3>
-              )}
-              {navigationItems?.map((item) => (
-                <NavItem key={item?.path} item={item} showLabel={!isCollapsed} />
-              ))}
-            </div>
-
-            {/* Configuration */}
-            <div className="space-y-2">
-              {!isCollapsed && (
-                <h3 className="text-xs font-semibold text-primary-foreground/60 uppercase tracking-wider px-3">
-                  Configuration
-                </h3>
-              )}
-              {configurationItems?.map((item) => (
-                <NavItem key={item?.path} item={item} showLabel={!isCollapsed} />
-              ))}
-            </div>
-          </nav>
-
-          {/* Bottom Section */}
-          <div className="px-4 py-4 border-t border-border/20">
-            {bottomItems?.map((item) => (
-              <NavItem key={item?.path} item={item} showLabel={!isCollapsed} />
-            ))}
-            
-            {/* Collapse Toggle */}
-            <div className="mt-4 pt-4 border-t border-border/20">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onToggleCollapse}
-                className={`w-full text-primary-foreground/70 hover:text-primary-foreground hover:bg-primary-foreground/10 ${
-                  isCollapsed ? 'justify-center' : 'justify-start'
-                }`}
-              >
-                <Icon 
-                  name={isCollapsed ? "ChevronRight" : "ChevronLeft"} 
-                  size={16} 
-                />
-                {!isCollapsed && <span className="ml-2">Collapse</span>}
-              </Button>
-            </div>
-          </div>
+      <aside style={{ position:'fixed', top:0, left:0, bottom:0, width:64, zIndex:100, display:'flex', flexDirection:'column', background:'#0a0a18', borderRight:'1px solid rgba(255,255,255,0.06)' }} className="hide-below-lg">
+        <div style={{ height:64, display:'flex', alignItems:'center', justifyContent:'center', borderBottom:'1px solid rgba(255,255,255,0.06)', cursor:'pointer' }} onClick={() => navigate('/')}>
+          <LogoMark size={30} />
+        </div>
+        <nav style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', padding:'1rem 0', gap:4 }}>
+          {NAV.map(item => <NavBtn key={item.path} item={item} />)}
+        </nav>
+        <div style={{ padding:'1rem 0', display:'flex', flexDirection:'column', alignItems:'center', gap:4, borderTop:'1px solid rgba(255,255,255,0.06)' }}>
+          {BOTTOM.map(item => <NavBtn key={item.path} item={item} />)}
+          <div style={{ marginTop:8, width:32, height:32, borderRadius:'50%', background:'linear-gradient(135deg, #8b5cf6, #7c3aed)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.75rem', fontWeight:700, color:'#fff', cursor:'pointer' }}>JD</div>
         </div>
       </aside>
-      {/* Mobile Bottom Navigation */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border z-100">
-        <div className="flex items-center justify-around px-2 py-2">
-          {navigationItems?.slice(0, 4)?.map((item) => {
-            const active = isActive(item?.path);
-            return (
-              <button
-                key={item?.path}
-                onClick={() => window.location.href = item?.path}
-                className={`
-                  flex flex-col items-center space-y-1 px-3 py-2 rounded-lg transition-colors relative
-                  ${active ? 'text-secondary' : 'text-muted-foreground'}
-                `}
-              >
-                <div className="relative">
-                  <Icon name={item?.icon} size={20} />
-                  {item?.badge && (
-                    <span className="absolute -top-2 -right-2 bg-secondary text-secondary-foreground text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
-                      {item?.badge}
-                    </span>
-                  )}
-                </div>
-                <span className="text-xs font-medium">{item?.label}</span>
-              </button>
-            );
-          })}
-          
-          {/* More Menu */}
-          <button className="flex flex-col items-center space-y-1 px-3 py-2 rounded-lg text-muted-foreground">
-            <Icon name="MoreHorizontal" size={20} />
-            <span className="text-xs font-medium">More</span>
-          </button>
-        </div>
+
+      <nav style={{ position:'fixed', bottom:0, left:0, right:0, height:60, background:'rgba(10,10,24,0.95)', backdropFilter:'blur(12px)', borderTop:'1px solid rgba(255,255,255,0.07)', display:'flex', alignItems:'center', justifyContent:'space-around', zIndex:100 }} className="show-below-lg">
+        {NAV.slice(0, 5).map(item => {
+          const active = isActive(item.path);
+          return (
+            <button key={item.path} onClick={() => navigate(item.path)}
+              style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:2, color: active ? '#a78bfa' : 'rgba(139,138,168,0.6)', background:'none', border:'none', cursor:'pointer', padding:'0.4rem' }}>
+              <Icon name={item.icon} size={18} />
+              <span style={{ fontSize:'0.6rem', fontWeight:500 }}>{item.label}</span>
+            </button>
+          );
+        })}
       </nav>
+
+      <style>{`
+        @media (min-width:1024px) { .show-below-lg { display:none !important; } }
+        @media (max-width:1023px) { .hide-below-lg { display:none !important; } }
+      `}</style>
     </>
   );
-};
-
-export default Sidebar;
+}

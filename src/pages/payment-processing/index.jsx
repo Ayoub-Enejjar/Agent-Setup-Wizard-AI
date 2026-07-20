@@ -305,7 +305,7 @@ const PaymentProcessing = () => {
         isCollapsed={sidebarCollapsed} 
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)} 
       />
-      <div className={`transition-all duration-300 ${sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-72'}`}>
+      <div className="transition-all duration-300 lg:ml-16">
         <Header />
         
         <main className="p-6 pb-20 lg:pb-6">

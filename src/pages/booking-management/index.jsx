@@ -232,9 +232,7 @@ const BookingManagement = () => {
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)} 
       />
       
-      <main className={`transition-all duration-300 ${
-        sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-72'
-      } pt-16 lg:pt-0`}>
+      <main className="transition-all duration-300 lg:ml-16 pt-16 lg:pt-0">
         <div className="p-6 space-y-6">
           {/* Page Header */}
           <div className="flex items-center justify-between">
