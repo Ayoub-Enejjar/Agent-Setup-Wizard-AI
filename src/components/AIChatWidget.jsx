@@ -12,8 +12,6 @@ const AIChatWidget = () => {
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
-  // Don't render if agent isn't set up
-  if (!config.isSetup) return null;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -70,6 +68,8 @@ const AIChatWidget = () => {
   const personalityEmoji = {
     professional: '💼', friendly: '😊', expert: '🧠', casual: '☕'
   };
+
+  if (!config.isSetup) return null;
 
   return (
     <>
