@@ -12,6 +12,7 @@ import WebhookManager from './components/WebhookManager';
 import { useAgent } from '../../context/agentContext';
 
 const IntegrationManagement = () => {
+  const { config, setConfig } = useAgent();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeModal, setActiveModal] = useState(null);
   const [integrations, setIntegrations] = useState([
@@ -22,8 +23,8 @@ const IntegrationManagement = () => {
       icon: 'MessageCircle',
       iconColor: 'text-green-600',
       bgColor: 'bg-green-50',
-      status: 'connected',
-      lastConnected: '2025-01-22 10:30 AM',
+      status: config.channels?.includes('whatsapp') ? 'connected' : 'disconnected',
+      lastConnected: config.channels?.includes('whatsapp') ? new Date()?.toLocaleString() : null,
       messagesCount: 247,
       errorMessage: null
     },
@@ -34,8 +35,8 @@ const IntegrationManagement = () => {
       icon: 'Instagram',
       iconColor: 'text-pink-600',
       bgColor: 'bg-pink-50',
-      status: 'disconnected',
-      lastConnected: null,
+      status: config.channels?.includes('instagram') ? 'connected' : 'disconnected',
+      lastConnected: config.channels?.includes('instagram') ? new Date()?.toLocaleString() : null,
       messagesCount: 0,
       errorMessage: null
     },
@@ -46,8 +47,8 @@ const IntegrationManagement = () => {
       icon: 'Globe',
       iconColor: 'text-secondary',
       bgColor: 'bg-secondary/10',
-      status: 'connected',
-      lastConnected: '2025-01-22 09:15 AM',
+      status: config.channels?.includes('website') ? 'connected' : 'disconnected',
+      lastConnected: config.channels?.includes('website') ? new Date()?.toLocaleString() : null,
       messagesCount: 89,
       errorMessage: null
     },
@@ -88,6 +89,37 @@ const IntegrationManagement = () => {
       errorMessage: null
     }
   ]);
+
+  // Sync integrations state with context config changes
+  useEffect(() => {
+    setIntegrations(prev => prev.map(integration => {
+      if (integration.id === 'whatsapp') {
+        const connected = config.channels?.includes('whatsapp') || !!config.whatsappNumber;
+        return {
+          ...integration,
+          status: connected ? 'connected' : 'disconnected',
+          lastConnected: connected ? integration.lastConnected || new Date().toLocaleString() : null
+        };
+      }
+      if (integration.id === 'instagram') {
+        const connected = config.channels?.includes('instagram') || !!config.instagramHandle;
+        return {
+          ...integration,
+          status: connected ? 'connected' : 'disconnected',
+          lastConnected: connected ? integration.lastConnected || new Date().toLocaleString() : null
+        };
+      }
+      if (integration.id === 'website-widget') {
+        const connected = config.channels?.includes('website');
+        return {
+          ...integration,
+          status: connected ? 'connected' : 'disconnected',
+          lastConnected: connected ? integration.lastConnected || new Date().toLocaleString() : null
+        };
+      }
+      return integration;
+    }));
+  }, [config.channels, config.whatsappNumber, config.instagramHandle]);
 
   const [healthData, setHealthData] = useState({
     deliveryRate: 97.5,
@@ -134,11 +166,11 @@ const IntegrationManagement = () => {
       // Prompt for Instagram handle and create real DM link
       const handle = prompt('Enter your Instagram username (without @):');
       if (handle) {
-        setIntegrations(prev => prev?.map(integration =>
-          integration?.id === 'instagram'
-            ? { ...integration, status: 'connected', lastConnected: new Date()?.toLocaleString(), instagramHandle: handle }
-            : integration
-        ));
+        setConfig(prev => ({
+          ...prev,
+          instagramHandle: handle,
+          channels: [...new Set([...(prev.channels || []), 'instagram'])]
+        }));
         // Open the real Instagram DM link
         window.open(`https://ig.me/m/${handle.trim()}`, '_blank');
       }
@@ -153,11 +185,12 @@ const IntegrationManagement = () => {
   };
 
   const handleDisconnect = (integrationId) => {
-    setIntegrations(prev => prev?.map(integration =>
-      integration?.id === integrationId
-        ? { ...integration, status: 'disconnected', lastConnected: null }
-        : integration
-    ));
+    setConfig(prev => ({
+      ...prev,
+      channels: (prev.channels || []).filter(c => c !== integrationId),
+      ...(integrationId === 'whatsapp' ? { whatsappNumber: '' } : {}),
+      ...(integrationId === 'instagram' ? { instagramHandle: '' } : {}),
+    }));
   };
 
   const handleConfigure = (integrationId) => {
@@ -178,20 +211,19 @@ const IntegrationManagement = () => {
     }
   };
 
-  const handleSaveWhatsApp = (config) => {
-    setIntegrations(prev => prev?.map(integration =>
-      integration?.id === 'whatsapp'
-        ? { ...integration, status: 'connected', lastConnected: new Date()?.toLocaleString() }
-        : integration
-    ));
+  const handleSaveWhatsApp = (whatsappConfig) => {
+    setConfig(prev => ({
+      ...prev,
+      whatsappNumber: whatsappConfig.phoneNumber,
+      channels: [...new Set([...(prev.channels || []), 'whatsapp'])]
+    }));
   };
 
-  const handleSaveWidget = (config) => {
-    setIntegrations(prev => prev?.map(integration =>
-      integration?.id === 'website-widget'
-        ? { ...integration, status: 'connected', lastConnected: new Date()?.toLocaleString() }
-        : integration
-    ));
+  const handleSaveWidget = (widgetConfig) => {
+    setConfig(prev => ({
+      ...prev,
+      channels: [...new Set([...(prev.channels || []), 'website'])]
+    }));
   };
 
   const handleSaveWebhooks = (webhooks) => {
