@@ -135,11 +135,92 @@ const AnalyticsDashboard = () => {
 
   const handleExport = (format) => {
     setIsLoading(true);
-    // Simulate export process
+
     setTimeout(() => {
-      console.log(`Exporting ${format} report...`);
+      if (format === 'csv') {
+        // Build CSV from metrics + channel data
+        const rows = [
+          ['Rocket.new Analytics Report'],
+          ['Generated', new Date().toLocaleString()],
+          ['Time Range', timeRange],
+          [],
+          ['Metric', 'Value', 'Change'],
+          ...metricsData.map(m => [m.title, m.value, m.change]),
+          [],
+          ['Channel', 'Leads', 'Conversions'],
+          ...channelData.map(c => [c.name, c.leads, c.conversions]),
+          [],
+          ['Date', 'Conversations', 'Responses'],
+          ...conversationData.map(d => [d.date, d.conversations, d.responses]),
+        ];
+        const csv = rows.map(r => r.join(',')).join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `rocket-analytics-${timeRange}-${Date.now()}.csv`;
+        link.click();
+        URL.revokeObjectURL(url);
+
+      } else if (format === 'pdf') {
+        // Build a simple printable HTML page and trigger browser print/save
+        const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Rocket.new Analytics Report</title>
+  <style>
+    body { font-family: -apple-system, sans-serif; padding: 40px; color: #1a1a2e; }
+    h1 { font-size: 1.8rem; margin-bottom: 0.25rem; }
+    .sub { color: #666; font-size: 0.85rem; margin-bottom: 2rem; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 2rem; }
+    th { background: #8b5cf6; color: #fff; padding: 8px 12px; text-align: left; font-size: 0.82rem; }
+    td { padding: 8px 12px; border-bottom: 1px solid #e5e7eb; font-size: 0.85rem; }
+    tr:hover td { background: #f9f9fb; }
+    h2 { font-size: 1.1rem; margin: 1.5rem 0 0.5rem; color: #5b21b6; }
+    .badge-pos { color: #16a34a; font-weight: 600; }
+    .badge-neg { color: #dc2626; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <h1>Rocket.new Analytics Report</h1>
+  <div class="sub">Generated: ${new Date().toLocaleString()} &nbsp;|&nbsp; Period: ${timeRange}</div>
+
+  <h2>Key Metrics</h2>
+  <table>
+    <tr><th>Metric</th><th>Value</th><th>Change</th></tr>
+    ${metricsData.map(m => `<tr><td>${m.title}</td><td><strong>${m.value}</strong></td><td class="badge-pos">${m.change}</td></tr>`).join('')}
+  </table>
+
+  <h2>Channel Performance</h2>
+  <table>
+    <tr><th>Channel</th><th>Leads</th><th>Conversions</th></tr>
+    ${channelData.map(c => `<tr><td>${c.name}</td><td>${c.leads.toLocaleString()}</td><td>${c.conversions.toLocaleString()}</td></tr>`).join('')}
+  </table>
+
+  <h2>Daily Conversation Volume</h2>
+  <table>
+    <tr><th>Date</th><th>Conversations</th><th>AI Responses</th></tr>
+    ${conversationData.map(d => `<tr><td>${d.date}</td><td>${d.conversations}</td><td>${d.responses}</td></tr>`).join('')}
+  </table>
+
+  <h2>AI Insights</h2>
+  <table>
+    <tr><th>Insight</th><th>Detail</th><th>Value</th></tr>
+    ${insights.map(i => `<tr><td>${i.title}</td><td>${i.description}</td><td>${i.value}</td></tr>`).join('')}
+  </table>
+</body>
+</html>`;
+        const win = window.open('', '_blank');
+        win.document.write(html);
+        win.document.close();
+        win.focus();
+        setTimeout(() => { win.print(); }, 400);
+      }
+
       setIsLoading(false);
-    }, 2000);
+    }, 600);
   };
 
   const handleRefresh = () => {
