@@ -11,12 +11,16 @@ const WhatsAppSetup = ({ isOpen, onClose, onSave }) => {
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
 
   const generateQRCode = async () => {
+    if (!phoneNumber) return;
     setIsGeneratingQR(true);
-    // Simulate QR code generation
+    // Generate real wa.me QR code from the phone number
+    const cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
+    const waLink = `https://wa.me/${cleanNumber}?text=Hi%2C%20I%27d%20like%20to%20know%20more%20about%20your%20services`;
     setTimeout(() => {
-      setQrCode('https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://wa.me/qr/DEMO123456789');
+      setQrCode(`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(waLink)}`);
       setIsGeneratingQR(false);
-    }, 2000);
+      setConnectionStatus('connected');
+    }, 1500);
   };
 
   const handleSave = () => {
@@ -103,9 +107,25 @@ const WhatsAppSetup = ({ isOpen, onClose, onSave }) => {
                     </p>
                   </div>
                   <div className="flex items-center justify-center space-x-2 text-sm">
-                    <div className="w-2 h-2 bg-warning rounded-full animate-pulse"></div>
-                    <span className="text-warning font-medium">Waiting for connection...</span>
+                    <div className={`w-2 h-2 rounded-full ${connectionStatus === 'connected' ? 'bg-success' : 'bg-warning animate-pulse'}`}></div>
+                    <span className={`font-medium ${connectionStatus === 'connected' ? 'text-success' : 'text-warning'}`}>
+                      {connectionStatus === 'connected' ? 'Link generated!' : 'Waiting for connection...'}
+                    </span>
                   </div>
+                  {connectionStatus === 'connected' && phoneNumber && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const cleanNum = phoneNumber.replace(/[^0-9]/g, '');
+                        window.open(`https://wa.me/${cleanNum}?text=Hi%2C%20I%27d%20like%20to%20know%20more%20about%20your%20services`, '_blank');
+                      }}
+                      iconName="ExternalLink"
+                      iconPosition="left"
+                    >
+                      Test WhatsApp Link
+                    </Button>
+                  )}
                 </div>
               ) : (
                 <div className="text-center py-12">

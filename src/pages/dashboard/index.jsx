@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { MessageSquare, Link2, Settings, Bot, ArrowRight, Check } from 'lucide-react';
 import Sidebar from '../../components/ui/Sidebar';
 import Header from '../../components/ui/Header';
+import { useAgent } from '../../context/agentContext';
 
 const QUICK = [
-  { Icon:MessageSquare, label:'Test your agent', desc:'Start a sample conversation', action:'/agent-setup-wizard', cta:'Open test chat' },
+  { Icon:MessageSquare, label:'Test your agent', desc:'Start a live AI conversation', action:'chat', cta:'Open test chat' },
   { Icon:Link2, label:'Share agent link', desc:'Copy and share your public link', action:null, cta:'Copy link' },
   { Icon:Settings, label:'Edit agent settings', desc:'Change name, tone, or channels', action:'/agent-setup-wizard', cta:'Edit agent' },
 ];
@@ -18,6 +19,7 @@ const CHECKLIST = [
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { config, stats, openChat } = useAgent();
 
   return (
     <div style={{ minHeight:'100vh', background:'#060610' }}>
@@ -42,7 +44,7 @@ export default function Dashboard() {
               <p style={{ color:'rgba(245,243,239,0.35)', maxWidth:380, margin:'0 auto 1.75rem', lineHeight:1.7, fontSize:'0.9rem' }}>Your agent is live but hasn't received any messages yet. Share the link or embed it on your site to get started.</p>
               <div style={{ display:'flex', gap:'0.75rem', justifyContent:'center', flexWrap:'wrap' }}>
                 <button className="btn-volt" style={{ fontSize:'0.85rem', padding:'0.7rem 1.5rem' }} onClick={() => navigate('/agent-setup-wizard')}>Configure channels <ArrowRight size={14} style={{ marginLeft:4 }}/></button>
-                <button className="btn-ghost" style={{ fontSize:'0.85rem', padding:'0.7rem 1.5rem' }}>Test conversation</button>
+                <button className="btn-ghost" style={{ fontSize:'0.85rem', padding:'0.7rem 1.5rem' }} onClick={openChat}>Test conversation</button>
               </div>
             </div>
           </div>
@@ -58,7 +60,7 @@ export default function Dashboard() {
                     <div key={q.label} style={{ display:'flex', alignItems:'center', gap:'0.85rem', padding:'0.85rem', borderRadius:12, background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.06)', cursor:'pointer', transition:'all 0.2s' }}
                       onMouseEnter={e => { e.currentTarget.style.borderColor='rgba(139,92,246,0.25)'; e.currentTarget.style.background='rgba(139,92,246,0.05)'; }}
                       onMouseLeave={e => { e.currentTarget.style.borderColor='rgba(255,255,255,0.06)'; e.currentTarget.style.background='rgba(255,255,255,0.03)'; }}
-                      onClick={() => q.action && navigate(q.action)}>
+                      onClick={() => { if (q.action === 'chat') openChat(); else if (q.action) navigate(q.action); }}>
                       <div style={{ width:34, height:34, borderRadius:9, background:'rgba(139,92,246,0.08)', display:'flex', alignItems:'center', justifyContent:'center', color:'#a78bfa', flexShrink:0 }}>
                         <QIcon size={16} />
                       </div>
@@ -100,7 +102,7 @@ export default function Dashboard() {
           {/* Stat strip */}
           <div style={{ display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:'1px', background:'rgba(255,255,255,0.06)', borderRadius:16, overflow:'hidden' }}>
             {[
-              { label:'Conversations', value:'—', sub:'Awaiting first message' },
+              { label:'Conversations', value: stats.totalConversations > 0 ? String(stats.totalConversations) : '—', sub: stats.totalConversations > 0 ? `${stats.totalResponses} AI responses` : 'Awaiting first message' },
               { label:'Response time', value:'< 2s', sub:'Average agent response' },
               { label:'Uptime', value:'99.9%', sub:'Platform availability' },
             ].map(stat => (

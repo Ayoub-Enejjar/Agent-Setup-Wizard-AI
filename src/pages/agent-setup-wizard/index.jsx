@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Scissors, Truck, Wrench, Building2, Target, Smile, Brain, Coffee, Globe, MessageSquare, Camera, Check, ArrowRight, ArrowLeft, Loader2, PartyPopper, Sparkles } from 'lucide-react';
 import { LogoMark } from '../../components/Logo';
+import { useAgent } from '../../context/agentContext';
 
 const TEMPLATES = [
   { id:'beauty', label:'Beauty & Salon', Icon:Scissors, accent:'#f472b6', desc:'Appointments, services, staff — fully automated.', features:['Appointment booking','Service pricing','Staff scheduling'] },
@@ -143,7 +144,7 @@ const LaunchStep = ({ enabled, onToggle }) => (
   </div>
 );
 
-const CompletionScreen = ({ data, onDashboard }) => (
+const CompletionScreen = ({ data, onDashboard, onTestAgent }) => (
   <div style={{ textAlign:'center', padding:'3rem 1rem' }}>
     <div style={{ width:72, height:72, borderRadius:20, background:'linear-gradient(135deg, #8b5cf6, #a8ff3e)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 1.5rem' }}>
       <Sparkles size={32} color="#060610" />
@@ -154,13 +155,14 @@ const CompletionScreen = ({ data, onDashboard }) => (
     </p>
     <div style={{ display:'flex', gap:'0.75rem', justifyContent:'center', flexWrap:'wrap' }}>
       <button className="btn-volt" style={{ fontSize:'0.92rem', padding:'0.85rem 2rem' }} onClick={onDashboard}>Go to Dashboard <ArrowRight size={15} style={{ marginLeft:4 }}/></button>
-      <button className="btn-ghost" style={{ fontSize:'0.92rem', padding:'0.85rem 2rem' }}>Test your agent</button>
+      <button className="btn-ghost" style={{ fontSize:'0.92rem', padding:'0.85rem 2rem' }} onClick={onTestAgent}>Test your agent <MessageSquare size={14} style={{ marginLeft:4 }}/></button>
     </div>
   </div>
 );
 
 export default function AgentSetupWizard() {
   const navigate = useNavigate();
+  const { completeSetup, openChat } = useAgent();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [template, setTemplate] = useState(null);
@@ -177,7 +179,22 @@ export default function AgentSetupWizard() {
   };
   const handleNext = async () => {
     if(!canNext()) return;
-    if(step === 3) { setLoading(true); await new Promise(r => setTimeout(r, 1800)); setLoading(false); setStep(4); }
+    if(step === 3) {
+      setLoading(true);
+      await new Promise(r => setTimeout(r, 1800));
+      // Save agent config to context
+      completeSetup({
+        template: template?.id || 'general',
+        personality,
+        businessName: business.businessName,
+        businessEmail: business.businessEmail,
+        contactPhone: business.contactPhone,
+        websiteUrl: business.websiteUrl,
+        channels,
+      });
+      setLoading(false);
+      setStep(4);
+    }
     else setStep(s=>s+1);
   };
 
@@ -220,7 +237,7 @@ export default function AgentSetupWizard() {
           {step===1 && <TemplateStep selected={template} onSelect={setTemplate} />}
           {step===2 && <ConfigureStep data={business} onChange={setBusiness} personality={personality} onPersonality={setPersonality} />}
           {step===3 && <LaunchStep enabled={channels} onToggle={toggleChannel} />}
-          {step===4 && <CompletionScreen data={business} onDashboard={() => navigate('/dashboard')} />}
+          {step===4 && <CompletionScreen data={business} onDashboard={() => navigate('/dashboard')} onTestAgent={openChat} />}
         </div>
       </div>
 

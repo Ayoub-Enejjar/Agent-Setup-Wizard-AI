@@ -9,6 +9,7 @@ import WebsiteWidget from './components/WebsiteWidget';
 import ConnectionHealth from './components/ConnectionHealth';
 import TestingInterface from './components/TestingInterface';
 import WebhookManager from './components/WebhookManager';
+import { useAgent } from '../../context/agentContext';
 
 const IntegrationManagement = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -129,6 +130,18 @@ const IntegrationManagement = () => {
       setActiveModal('whatsapp-setup');
     } else if (integrationId === 'website-widget') {
       setActiveModal('website-widget');
+    } else if (integrationId === 'instagram') {
+      // Prompt for Instagram handle and create real DM link
+      const handle = prompt('Enter your Instagram username (without @):');
+      if (handle) {
+        setIntegrations(prev => prev?.map(integration =>
+          integration?.id === 'instagram'
+            ? { ...integration, status: 'connected', lastConnected: new Date()?.toLocaleString(), instagramHandle: handle }
+            : integration
+        ));
+        // Open the real Instagram DM link
+        window.open(`https://ig.me/m/${handle.trim()}`, '_blank');
+      }
     } else {
       // Simulate connection for other integrations
       setIntegrations(prev => prev?.map(integration =>

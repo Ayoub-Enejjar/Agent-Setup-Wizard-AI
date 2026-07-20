@@ -1,81 +1,54 @@
-import React, { useState, useEffect } from 'react';
-import Icon from '../../../components/AppIcon';
-import Button from '../../../components/ui/Button';
+import React, { useState, useRef, useEffect } from 'react';
+import { MessageCircle, Instagram, Globe, MessageSquare, MoreHorizontal, ArrowLeft, MoreVertical, Pause, Play, Send, Loader2, Bot } from 'lucide-react';
+import { useAgent } from '../../../context/agentContext';
+import { streamChatWithAgent } from '../../../services/mistralService';
 
 const LiveChatPreview = () => {
+  const { config, openChat } = useAgent();
   const [isOnline, setIsOnline] = useState(true);
-  const [activeChats, setActiveChats] = useState(3);
   const [selectedChat, setSelectedChat] = useState(null);
+  const [inputText, setInputText] = useState('');
+  const [localMessages, setLocalMessages] = useState([]);
+  const [isTyping, setIsTyping] = useState(false);
+  const [streamingText, setStreamingText] = useState('');
+  const messagesEndRef = useRef(null);
 
   const chatPreviews = [
     {
-      id: 1,
-      customer: 'Sarah Johnson',
+      id: 1, customer: 'Sarah Johnson',
       avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face',
       lastMessage: 'Hi, I need help with booking an appointment',
-      timestamp: new Date(Date.now() - 120000),
-      unread: 2,
-      status: 'typing',
-      channel: 'whatsapp'
+      timestamp: new Date(Date.now() - 120000), unread: 2, status: 'typing', channel: 'whatsapp'
     },
     {
-      id: 2,
-      customer: 'Michael Chen',
+      id: 2, customer: 'Michael Chen',
       avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
       lastMessage: 'What are your pricing options?',
-      timestamp: new Date(Date.now() - 300000),
-      unread: 0,
-      status: 'online',
-      channel: 'web'
+      timestamp: new Date(Date.now() - 300000), unread: 0, status: 'online', channel: 'web'
     },
     {
-      id: 3,
-      customer: 'Emma Rodriguez',
+      id: 3, customer: 'Emma Rodriguez',
       avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face',
       lastMessage: 'Thank you for the quick response!',
-      timestamp: new Date(Date.now() - 900000),
-      unread: 0,
-      status: 'away',
-      channel: 'instagram'
-    }
-  ];
-
-  const sampleMessages = [
-    {
-      id: 1,
-      sender: 'customer',
-      message: 'Hi, I need help with booking an appointment',
-      timestamp: new Date(Date.now() - 180000)
-    },
-    {
-      id: 2,
-      sender: 'agent',
-      message: 'Hello! I\'d be happy to help you book an appointment. What service are you interested in?',
-      timestamp: new Date(Date.now() - 120000)
-    },
-    {
-      id: 3,
-      sender: 'customer',
-      message: 'I\'m looking for a premium hair styling session',
-      timestamp: new Date(Date.now() - 60000)
+      timestamp: new Date(Date.now() - 900000), unread: 0, status: 'away', channel: 'instagram'
     }
   ];
 
   const getChannelIcon = (channel) => {
     switch (channel) {
-      case 'whatsapp': return 'MessageCircle';
-      case 'instagram': return 'Instagram';
-      case 'web': return 'Globe';
-      default: return 'MessageSquare';
+      case 'whatsapp': return MessageCircle;
+      case 'instagram': return Instagram;
+      case 'web': return Globe;
+      default: return MessageSquare;
     }
   };
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'online': return 'bg-success';
-      case 'typing': return 'bg-secondary';
-      case 'away': return 'bg-warning';
-      default: return 'bg-muted';
+      case 'online': return '#22c55e';
+      case 'typing': return '#8b5cf6';
+      case 'away': return '#eab308';
+      default: return '#6b7280';
     }
   };
 
@@ -84,168 +57,204 @@ const LiveChatPreview = () => {
   };
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setActiveChats(prev => Math.max(1, prev + Math.floor(Math.random() * 3) - 1));
-    }, 30000);
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [localMessages, streamingText]);
 
-    return () => clearInterval(interval);
-  }, []);
+  const handleSendMessage = async () => {
+    const text = inputText.trim();
+    if (!text || isTyping) return;
+    setInputText('');
+
+    const userMsg = { role: 'user', content: text, timestamp: new Date() };
+    setLocalMessages(prev => [...prev, userMsg]);
+
+    setIsTyping(true);
+    setStreamingText('');
+
+    try {
+      const allMsgs = [...localMessages, userMsg];
+      const finalContent = await streamChatWithAgent(allMsgs, config, (fullText) => {
+        setStreamingText(fullText);
+      });
+      setLocalMessages(prev => [...prev, { role: 'assistant', content: finalContent, timestamp: new Date() }]);
+      setStreamingText('');
+    } catch (err) {
+      setLocalMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, I encountered an error. Please try again.', timestamp: new Date() }]);
+    } finally {
+      setIsTyping(false);
+    }
+  };
 
   return (
-    <div className="bg-card border border-border rounded-lg h-full flex flex-col">
-      <div className="p-4 border-b border-border">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold text-foreground">Live Chat</h3>
-          <div className="flex items-center space-x-2">
-            <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-success' : 'bg-destructive'}`} />
-            <span className="text-sm text-muted-foreground">
-              {isOnline ? 'Online' : 'Offline'}
-            </span>
+    <div style={{ background: 'rgba(14,14,28,0.6)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      {/* Header */}
+      <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+          <h3 style={{ fontWeight: 600, fontSize: '0.9rem', color: '#f5f3ef' }}>Live Chat</h3>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: isOnline ? '#22c55e' : '#ef4444' }} />
+            <span style={{ fontSize: '0.78rem', color: 'rgba(245,243,239,0.4)' }}>{isOnline ? 'Online' : 'Offline'}</span>
           </div>
         </div>
-        
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">
-            {activeChats} active conversations
-          </span>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsOnline(!isOnline)}
-            iconName={isOnline ? 'Pause' : 'Play'}
-          >
-            {isOnline ? 'Pause' : 'Resume'}
-          </Button>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: '0.78rem', color: 'rgba(245,243,239,0.35)' }}>3 active conversations</span>
+          <button onClick={() => setIsOnline(!isOnline)} style={{
+            all: 'unset', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+            fontSize: '0.75rem', color: 'rgba(245,243,239,0.4)', padding: '4px 8px', borderRadius: 6,
+            background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)',
+          }}>
+            {isOnline ? <><Pause size={12} /> Pause</> : <><Play size={12} /> Resume</>}
+          </button>
         </div>
       </div>
-      <div className="flex-1 overflow-hidden">
-        {!selectedChat ? (
-          <div className="h-full overflow-y-auto">
-            {chatPreviews?.map((chat) => (
-              <div
-                key={chat?.id}
-                onClick={() => setSelectedChat(chat)}
-                className="p-3 border-b border-border hover:bg-muted/30 cursor-pointer transition-colors"
-              >
-                <div className="flex items-start space-x-3">
-                  <div className="relative">
-                    <div className="w-10 h-10 rounded-full overflow-hidden bg-muted">
-                      <img
-                        src={chat?.avatar}
-                        alt={chat?.customer}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.target.src = '/assets/images/no_image.png';
-                        }}
-                      />
-                    </div>
-                    <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border border-card ${getStatusColor(chat?.status)}`} />
-                  </div>
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center space-x-2">
-                        <h4 className="font-medium text-foreground text-sm truncate">
-                          {chat?.customer}
-                        </h4>
-                        <Icon name={getChannelIcon(chat?.channel)} size={12} className="text-muted-foreground" />
+      {/* Content */}
+      <div style={{ flex: 1, overflow: 'hidden' }}>
+        {!selectedChat ? (
+          <div style={{ height: '100%', overflowY: 'auto' }}>
+            {chatPreviews.map((chat) => {
+              const ChannelIcon = getChannelIcon(chat.channel);
+              return (
+                <div key={chat.id} onClick={() => { setSelectedChat(chat); setLocalMessages([{ role: 'user', content: chat.lastMessage, timestamp: chat.timestamp }]); }}
+                  style={{
+                    padding: '0.85rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.04)',
+                    cursor: 'pointer', transition: 'background 0.2s',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(139,92,246,0.04)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                >
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                    <div style={{ position: 'relative' }}>
+                      <div style={{ width: 40, height: 40, borderRadius: '50%', overflow: 'hidden', background: 'rgba(255,255,255,0.05)' }}>
+                        <img src={chat.avatar} alt={chat.customer} style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          onError={(e) => { e.target.style.display = 'none'; }} />
                       </div>
-                      <div className="flex items-center space-x-1">
-                        <span className="text-xs text-muted-foreground">
-                          {formatTime(chat?.timestamp)}
-                        </span>
-                        {chat?.unread > 0 && (
-                          <span className="bg-secondary text-secondary-foreground text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
-                            {chat?.unread}
-                          </span>
-                        )}
-                      </div>
+                      <span style={{ position: 'absolute', bottom: -1, right: -1, width: 12, height: 12, borderRadius: '50%', background: getStatusColor(chat.status), border: '2px solid #0e0e1c' }} />
                     </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm text-muted-foreground truncate">
-                        {chat?.status === 'typing' ? (
-                          <span className="flex items-center space-x-1">
-                            <Icon name="MoreHorizontal" size={12} className="animate-pulse" />
-                            <span className="italic">typing...</span>
-                          </span>
-                        ) : (
-                          chat?.lastMessage
-                        )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ fontWeight: 500, fontSize: '0.85rem', color: '#f5f3ef' }}>{chat.customer}</span>
+                          <ChannelIcon size={12} style={{ color: 'rgba(245,243,239,0.3)' }} />
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ fontSize: '0.7rem', color: 'rgba(245,243,239,0.25)' }}>{formatTime(chat.timestamp)}</span>
+                          {chat.unread > 0 && (
+                            <span style={{ width: 18, height: 18, borderRadius: '50%', background: '#8b5cf6', fontSize: '0.65rem', fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{chat.unread}</span>
+                          )}
+                        </div>
+                      </div>
+                      <p style={{ fontSize: '0.8rem', color: 'rgba(245,243,239,0.35)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {chat.status === 'typing' ? (
+                          <span style={{ fontStyle: 'italic', color: '#a78bfa' }}>typing...</span>
+                        ) : chat.lastMessage}
                       </p>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
-          <div className="h-full flex flex-col">
-            <div className="p-3 border-b border-border">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSelectedChat(null)}
-                    iconName="ArrowLeft"
-                  />
-                  <div className="flex items-center space-x-2">
-                    <div className="w-8 h-8 rounded-full overflow-hidden bg-muted">
-                      <img
-                        src={selectedChat?.avatar}
-                        alt={selectedChat?.customer}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.target.src = '/assets/images/no_image.png';
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-foreground text-sm">{selectedChat?.customer}</h4>
-                      <p className="text-xs text-muted-foreground capitalize">{selectedChat?.status}</p>
-                    </div>
-                  </div>
+          <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            {/* Chat header */}
+            <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <button onClick={() => { setSelectedChat(null); setLocalMessages([]); setStreamingText(''); }}
+                  style={{ all: 'unset', cursor: 'pointer', color: 'rgba(245,243,239,0.4)', display: 'flex' }}>
+                  <ArrowLeft size={16} />
+                </button>
+                <div style={{ width: 30, height: 30, borderRadius: '50%', overflow: 'hidden', background: 'rgba(255,255,255,0.05)' }}>
+                  <img src={selectedChat.avatar} alt={selectedChat.customer} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.style.display = 'none'; }} />
                 </div>
-                <Button variant="ghost" size="sm" iconName="MoreVertical" />
+                <div>
+                  <div style={{ fontWeight: 500, fontSize: '0.85rem', color: '#f5f3ef' }}>{selectedChat.customer}</div>
+                  <div style={{ fontSize: '0.7rem', color: 'rgba(245,243,239,0.3)', textTransform: 'capitalize' }}>{isTyping ? 'AI is typing...' : selectedChat.status}</div>
+                </div>
               </div>
             </div>
 
-            <div className="flex-1 p-3 space-y-3 overflow-y-auto">
-              {sampleMessages?.map((message) => (
-                <div
-                  key={message?.id}
-                  className={`flex ${message?.sender === 'agent' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-[80%] px-3 py-2 rounded-lg text-sm ${
-                      message?.sender === 'agent' ?'bg-secondary text-secondary-foreground' :'bg-muted text-foreground'
-                    }`}
-                  >
-                    <p>{message?.message}</p>
-                    <p className={`text-xs mt-1 ${
-                      message?.sender === 'agent' ? 'text-secondary-foreground/70' : 'text-muted-foreground'
-                    }`}>
-                      {formatTime(message?.timestamp)}
-                    </p>
+            {/* Messages */}
+            <div style={{ flex: 1, padding: '0.75rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {localMessages.map((msg, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-start' : 'flex-end' }}>
+                  <div style={{
+                    maxWidth: '80%', padding: '8px 12px', borderRadius: 12, fontSize: '0.82rem', lineHeight: 1.55,
+                    background: msg.role === 'assistant' ? 'linear-gradient(135deg, rgba(139,92,246,0.2), rgba(99,102,241,0.15))' : 'rgba(255,255,255,0.06)',
+                    border: msg.role === 'assistant' ? '1px solid rgba(139,92,246,0.2)' : '1px solid rgba(255,255,255,0.06)',
+                    color: '#f5f3ef',
+                  }}>
+                    {msg.role === 'assistant' && <div style={{ fontSize: '0.65rem', color: '#a78bfa', marginBottom: 3, fontWeight: 600 }}>AI Agent</div>}
+                    {msg.content}
+                    <div style={{ fontSize: '0.65rem', color: 'rgba(245,243,239,0.2)', marginTop: 4 }}>{formatTime(msg.timestamp)}</div>
                   </div>
                 </div>
               ))}
+              {streamingText && (
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <div style={{
+                    maxWidth: '80%', padding: '8px 12px', borderRadius: 12, fontSize: '0.82rem', lineHeight: 1.55,
+                    background: 'linear-gradient(135deg, rgba(139,92,246,0.2), rgba(99,102,241,0.15))',
+                    border: '1px solid rgba(139,92,246,0.2)', color: '#f5f3ef',
+                  }}>
+                    <div style={{ fontSize: '0.65rem', color: '#a78bfa', marginBottom: 3, fontWeight: 600 }}>AI Agent</div>
+                    {streamingText}
+                    <span style={{ display: 'inline-block', width: 4, height: 12, background: '#a78bfa', marginLeft: 2, animation: 'blink 0.8s infinite', verticalAlign: 'text-bottom', borderRadius: 1 }} />
+                  </div>
+                </div>
+              )}
+              {isTyping && !streamingText && (
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <div style={{ padding: '10px 16px', borderRadius: 12, background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.15)', display: 'flex', gap: 4 }}>
+                    <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#a78bfa', animation: 'dotBounce 1.4s ease-in-out infinite' }} />
+                    <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#a78bfa', animation: 'dotBounce 1.4s ease-in-out 0.2s infinite' }} />
+                    <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#a78bfa', animation: 'dotBounce 1.4s ease-in-out 0.4s infinite' }} />
+                  </div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
             </div>
 
-            <div className="p-3 border-t border-border">
-              <div className="flex space-x-2">
-                <Button variant="outline" size="sm" iconName="User">
-                  Handoff
-                </Button>
-                <Button variant="secondary" size="sm" iconName="MessageSquare" fullWidth>
-                  Quick Reply
-                </Button>
+            {/* Input */}
+            <div style={{ padding: '0.6rem 0.75rem', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+                <button onClick={openChat} style={{
+                  all: 'unset', cursor: 'pointer', fontSize: '0.72rem', padding: '5px 10px', borderRadius: 6,
+                  background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.15)', color: '#a78bfa',
+                }}>
+                  <Bot size={11} style={{ marginRight: 3, verticalAlign: 'middle' }} /> Full chat
+                </button>
+              </div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <input
+                  type="text" value={inputText} onChange={e => setInputText(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleSendMessage(); }}
+                  placeholder="Reply with AI..."
+                  disabled={isTyping}
+                  style={{
+                    flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)',
+                    borderRadius: 8, padding: '7px 12px', fontSize: '0.8rem', color: '#f5f3ef',
+                    outline: 'none', fontFamily: 'inherit',
+                  }}
+                />
+                <button onClick={handleSendMessage} disabled={!inputText.trim() || isTyping}
+                  style={{
+                    width: 32, height: 32, borderRadius: 8, border: 'none', cursor: inputText.trim() && !isTyping ? 'pointer' : 'not-allowed',
+                    background: inputText.trim() && !isTyping ? '#8b5cf6' : 'rgba(255,255,255,0.05)',
+                    color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                  }}>
+                  {isTyping ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Send size={14} />}
+                </button>
               </div>
             </div>
           </div>
         )}
       </div>
+      <style>{`
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+        @keyframes dotBounce { 0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }
+        @keyframes spin { to { transform: rotate(360deg); } }
+      `}</style>
     </div>
   );
 };
